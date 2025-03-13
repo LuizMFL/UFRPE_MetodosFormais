@@ -1,0 +1,9 @@
+channel in: {1,2}.{0..5}
+channel out: {0..5}
+channel switch
+
+POLL = in.1?x -> out!x -> POLL 
+		[]
+	   switch -> (in.2?x -> out!x -> POLL 
+	   				[] 
+	   			  switch -> POLL)

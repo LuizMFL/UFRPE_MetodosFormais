@@ -1,0 +1,26 @@
+-- Processo WHILE
+-- Processo REPEAT-UNTIL (executa ao menos um loop e faz o teste no final)
+-- Processo FOR-EACH (executa a repetição de acordo com a quantidade de elementos de uma sequência).
+
+channel loop: {true, false}
+channel print: {0..1000}
+P = SKIP
+S(x) = print.x -> SKIP
+WHILE(y, false) = SKIP
+WHILE(y, true) = y; loop?x -> WHILE(y, x)
+
+REPEAT_UNTIL(y, false) = y; SKIP
+REPEAT_UNTIL(y, true) = y; loop?x -> REPEAT_UNTIL(y,x)
+
+
+FOR_EACH(y, <>) = SKIP
+FOR_EACH(y, l) = y(head(l)); FOR_EACH(y,tail(l))
+
+
+assert WHILE(P, false) [F= SKIP
+assert WHILE(P, true) [F= SKIP
+
+assert REPEAT_UNTIL(P, false) [F= SKIP
+assert REPEAT_UNTIL(P, true) [F= SKIP
+
+

@@ -1,0 +1,10 @@
+-- Ring Buffer (https://blog.pantuza.com/artigos/ring-buffer)
+-- Lista circular usada para armazenar informações e que possui um tamanho fixo em que o fim se conecta com o início
+-- O acesso aos dados segue a regra FIFO (First-in, First-out)
+-- 2 variáveis que armazenam o início e fim da fila
+-- Tanto a inserção e remoção é feita em tempo constante
+-- Cada área da lista (ou célula) é um processo CSP
+-- Existe um processo controlador que gerencia a inserção e a remoção dos elementos nas células do Ring Buffer.
+-- Os processos das células rodam em paralelo mas sem comunicação entre eles
+-- Há sincronização entre o processo do controlador e o processo das células.
+-- Verifique que ela é livre de deadlock e não determinismo.

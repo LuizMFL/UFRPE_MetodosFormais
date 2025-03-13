@@ -1,0 +1,18 @@
+
+VALORES = {0..5}
+N_CONSUMIDOR = 2
+
+channel produz : VALORES
+channel consome : {0..N_CONSUMIDOR-1}.VALORES
+channel ch : VALORES
+
+PRODUTOR = produz?v -> ch!v -> PRODUTOR
+
+CONSUMIDOR(id) = ch?v -> consome!id!v -> CONSUMIDOR(id)
+
+CONSUMIDORES = ||| i : {0..N_CONSUMIDOR-1} @ CONSUMIDOR(i)
+
+PRODUTOR_CONSUMIDORES = PRODUTOR [|{|ch|}|] CONSUMIDORES
+
+assert PRODUTOR_CONSUMIDORES :[deadlock free]
+assert PRODUTOR_CONSUMIDORES :[deterministic]

@@ -1,0 +1,40 @@
+-- Analise o processo POLL
+-- veja se ele é determinístico e livre de divergência
+-- Em seguida, crie dois novos processos:
+-- um em que você invoca o processo POLL escondendo o evento "in"
+-- outro em que você invoca o processo POLL escondendo o evento "switch". 
+-- Verifique as mesmas propriedades (determinismo e divergência)
+-- coloque comentários na sua especificação que explicam porque elas passam ou falham nesses dois novos processos.
+
+
+channel in: {1,2}.{0..5}
+channel out: {0..5}
+channel switch
+
+POLL = in.1?x -> out!x -> POLL 
+		[]
+	   switch -> (in.2?x -> out!x -> POLL 
+	   				[] 
+	   			  switch -> POLL)
+
+POLLIN = POLL\{|in|}
+POLLSWITCH = POLL\{|switch|}
+
+---- Verificando se POLL é determinístico e livre de divergência:
+-- POLL é determinístico, pois todas as escolhas são externas e não oferecem eventos iniciais em comum
+assert POLL :[deterministic]
+-- POLL é livre de divergência, pois todos seus estados são alcançados utilizando eventos visíveis
+assert POLL :[divergence free]
+
+---- Verificando se POLLIN é determinístico e livre de divergência:
+-- POLLIN não é determinístico, pois logo no início ele gera uma escolha interna que terá 2 casos de trace τ -> ( τ -> out!x -> ... [~] switch -> ...)
+assert POLLIN :[deterministic]
+-- POLLIN é livre de divergência, pois ainda existem eventos visíveis em todos os traces que levam ao loop do POOL 
+assert POLLIN :[divergence free]
+
+---- Verificando se POLLSWITCH é determinístico e livre de divergência:
+-- POLLSWITCH não é determinístico, pois logo no início ele gera uma escolha interna que terá 2 casos de trace τ -> (in.1?x -> ... [~] τ -> ...)
+assert POLLSWITCH :[deterministic]
+-- POLLISWTICH não é livre de divergência, pois existe um trace que leva ao loop do POOL usando apenas eventos τ:  τ -> τ -> POOL
+assert POLLSWITCH :[divergence free]
+

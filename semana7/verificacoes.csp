@@ -1,0 +1,68 @@
+-- Crie verificações de refinamento no modelo falha e divergências 
+-- Coloque comentários justificando cada resultadoa. 
+-- Cheque quais são determinísticos.
+
+--------------------------------------------------------------------------
+-- ESPECIFICAÇÕES
+--------------------------------------------------------------------------
+
+channel a, b
+
+CHAOS(S) = STOP  |~|  ([] x:S @ x -> CHAOS(S))
+
+DF(S) = (|~| x:S @ x -> DF(S))
+
+RUN(S) = [] x:S @ x -> RUN(S)
+
+--------------------------------------------------------------------------
+-- DETERMINISMO
+--------------------------------------------------------------------------
+--! FALHA -> Pois logo no início ocorre um NÃO-DETERMINISMO a partir de uma escolha INTERNA para decidir entre STOP e o Processo de Loop chamando o evento 'a'
+assert CHAOS({a}) :[deterministic]
+
+--! FALHA -> Pois logo no início ocorre um NÃO-DETERMINISMO a partir de uma escolha INTERNA para decidir entre STOP e o Processo de Loop chamando o evento 'a' ou 'b'
+assert CHAOS({a,b}) :[deterministic]
+
+--! FALHA -> Pois logo no início ocorre um NÃO-DETERMINISMO a partir de uma escolha INTERNA para decidir entre o Processo de Loop chamando o evento 'a' ou evento 'b'
+assert DF({a,b}) :[deterministic]
+
+--? PASSA -> Pois executa os traces sem precisar decidir internamente ou existindo uma dualidade de execução que leve a um mesmo Trace
+assert RUN({a,b}) :[deterministic]
+--------------------------------------------------------------------------
+-- VERIFICAÇÕES DE REFINAMENTO
+--------------------------------------------------------------------------
+
+
+----- CHAOS({a}):
+
+--! FALHA -> Pois as falhas de CHAOS({a}) não podem ser refinadas em CHAOS({a,b}). Ele tem um conjunto de falhas definido por {(<>, {}), (<>, {a}), (<a>,{a}), ..} e CHAOS({a,b}) tem {(<>, {}), (<>,{a,b}), (<a>,{a,b}), ..}
+assert CHAOS({a}) [FD= CHAOS({a,b})
+--? PASSA -> Pois as falhas de CHAOS({a,b}) podem ser refinadas em CHAOS({a}). O conjunto de falhas de {a} está contido em {a,b}
+assert CHAOS({a,b}) [FD= CHAOS({a})
+
+--! FALHA -> Pois as falhas de CHAOS({a}) não podem ser refinadas em DF({a,b}). Ele tem um conjunto de falhas definido por {(<>, {}), (<>, {a}), (<a>,{a}), ..} e DF({a,b}) tem {(<>,{a,b}), (<a>,{a,b}), ..}
+assert CHAOS({a}) [FD= DF({a,b})
+--! FALHA -> Pois CHAOS({a}) possui a falha (<>, {}) que não é alcançada em DF({a,b})
+assert DF({a,b}) [FD= CHAOS({a})
+
+--! FALHA -> Pois RUN({a,b}) tem a falha (<b>, {})
+assert CHAOS({a}) [FD= RUN({a,b})
+--! FALHA
+assert RUN({a,b}) [FD= CHAOS({a})
+
+----- CHAOS({a,b}):
+--? PASSA
+assert CHAOS({a,b}) [FD= DF({a,b})
+--! FALHA
+assert DF({a,b}) [FD= CHAOS({a,b})
+
+--? PASSA
+assert CHAOS({a,b}) [FD= RUN({a,b})
+--! FALHA
+assert RUN({a,b}) [FD= CHAOS({a,b})
+
+----- DF({a,b}):
+--? PASSA
+assert DF({a,b}) [FD= RUN({a,b})
+--! FALHA
+assert RUN({a,b}) [FD= DF({a,b})

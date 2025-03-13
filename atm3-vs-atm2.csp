@@ -1,0 +1,55 @@
+-- Crie uma variação do exemplo do caixa eletrônico
+-- máquina pode recusar dinheiro quando o saldo é insuficiente
+-- máquina recusa dinheiro mas quando o valor solicitado é maior que a quantidade de dinheiro disponível no caixa eletrônico.
+-- Verifique se o seu processo refina em traces o processo ATM3.
+
+CARD = { 0..9 }
+datatype pinnumbers = PIN.Int
+fpin(c) = PIN.c
+PINs = { fpin(c) | c <- CARD }
+WA = { 10,20,30,40,50 }
+
+channel incard, outcard: CARD
+channel pin: PINs
+channel req, dispense: WA
+
+
+ATM1 = 	incard?c -> pin.fpin(c) -> req?n ->
+         dispense!n -> outcard.c -> ATM1
+
+----------------
+
+channel refuse
+ATM2 = 
+ incard?c -> pin.fpin(c) -> req?n ->
+   ( dispense!n -> outcard.c -> ATM2
+  		|~| 
+     refuse -> outcard.c -> ATM2
+   )
+
+
+ATM3(saldo) = 
+ incard?c -> pin.fpin(c) -> req?n ->
+   if(saldo - n >= 0) then (
+			dispense!n -> outcard.c -> 
+				ATM3(saldo-n)
+   ) else (
+      refuse -> outcard.c -> ATM3(saldo)
+		 )
+
+ATM4(saldo) = 
+  incard?c -> pin.fpin(c) -> req?n ->
+    if(saldo - n >= 0) then (
+      dispense!n -> outcard.c -> 
+			ATM4(saldo-n)
+    ) else (
+      refuse -> outcard.c -> ATM3(saldo)
+		)
+     
+assert ATM2 [T= ATM3(100)
+assert ATM3(100) [T= ATM2
+
+assert ATM2 [F= ATM3(100)
+assert ATM3(100) [F= ATM2
+
+assert ATM4(100) [T= ATM3(100)
