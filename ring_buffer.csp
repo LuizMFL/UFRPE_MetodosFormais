@@ -8,3 +8,29 @@
 -- Os processos das células rodam em paralelo mas sem comunicação entre eles
 -- Há sincronização entre o processo do controlador e o processo das células.
 -- Verifique que ela é livre de deadlock e não determinismo.
+
+channel out, in, print: { 0..10 }.{ 0..100}
+
+QUEUE = <(-1),(-1),(-1),(-1),(-1),(-1),(-1),(-1),(-1),(-1)>
+
+P(id) = 
+    out?id?x -> SKIP
+
+add(value, queue, tail_index) = 
+    if ( queue == <> ) then
+        <>
+    else if ( tail_index == 0 ) then
+        <value>^tail(queue)
+    else
+        <head(queue)>^add(value, tail(queue), tail_index - 1)
+
+REMOVE(queue, head_value, index) = 
+    
+RUN_OUT(queue, id) =
+    
+    out.id & done?id -> SKIP
+
+RING_BUFFER(queue, head, tail) =
+    head != tail -> {
+        
+    }

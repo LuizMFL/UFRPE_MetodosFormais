@@ -1,0 +1,147 @@
+-------------------------------------------------------------------------------
+-- Tipos e constantes
+-------------------------------------------------------------------------------
+
+datatype NOMES = N1 | N2 | N3 | N4 | N5 | N6
+
+datatype TELEFONES = T1 | T2 | T3 | T4 | T5 | T6
+
+MAX = 3
+
+EXEMPLO_AGENDA = <(N1,T1), (N2,T2), (N3, T3)>
+
+
+-------------------------------------------------------------------------------
+-- Funções
+-------------------------------------------------------------------------------
+
+fst((a,b)) = a
+sec((a,b)) = b
+
+last(<(n,t)>) = (n,t)
+last(<(n,t)>^tail) = last(tail) 
+
+-- nas funcoes a seguir, contatos representa uma lista cujos elementos são tuplas
+-- na forma (n,t) onde n é do tipo NOMES e t é do tipo TELEFONES
+
+-- retorna um conjunto com todos os nomes da lista
+nomes(contatos) = 
+	if(contatos == <>) then
+		{}
+	else 
+		union({fst(head(contatos))}, nomes(tail(contatos)))
+
+-- retorna a lista com o novo contato concatenado no fim
+adi(contatos, n, t) = contatos^<(n,t)>
+
+-- retorna o conjunto dos telefones associados ao contato n
+tels(contatos, n) = 
+	if(contatos == <>) then
+		{}
+	else if ( fst(head(contatos)) == n ) then
+		union( {sec(head(contatos))} , tels(tail(contatos), n) )
+	else
+		tels(tail(contatos), n)
+
+-- retorna a lista sem o contato n
+rem(contatos, n) = 
+		if (contatos == <>) then
+			<>
+		else if( fst(head(contatos)) == n ) then
+			rem(tail(contatos), n)
+		else
+			<head(contatos)>^rem(tail(contatos), n)
+
+
+
+-- muda o numero de um contato por outro
+mod(contatos, n, t_atual, t_novo) = 
+	if (contatos == <>) then
+		<>
+	else if (fst(head(contatos)) == n and sec(head(contatos)) == t_atual ) then
+		<(fst(head(contatos)), t_novo)> ^ mod(tail(contatos), n, t_atual, t_novo)
+	else
+		<head(contatos)> ^ mod(tail(contatos), n, t_atual, t_novo)
+
+
+-- retorna o conjunto de numeros que nao estao associados a um contato
+nao_associados(contatos, n) = { t | t <- TELEFONES, not member(t,tels(contatos,n)) }
+
+-- retorna o conjunto de numeros que sao diferentes do numero atual do contato
+novos(contatos, n, t_atual) = { t | t <- TELEFONES, t != t_atual, not member(t, tels(contatos,n))  }
+
+
+
+-------------------------------------------------------------------------------
+-- Exercicio:
+
+-- Altere o exemplo da agenda em CSP
+-- suporte a migração de uma outra agenda para a agenda corrente.
+-- Em outras palavras, você deverá receber uma outra agenda, e a nova agenda deverá ser a união dos dados desta outra agenda com a agenda corrente.
+-- Lembre-se de criar os eventos e alterar o processo principal para permitir este comportamento e crie quantas funções achar necessário para suportá-lo.
+
+-------------------------------------------------------------------------------
+
+channel migrar : NOMES.TELEFONES
+channel cancelar: NOMES.TELEFONES
+
+AGENDA_EXTRA = <(N4,T4), (N5,T5), (N6, T6)>
+AGENDA_EXTRA_EXISTENTE = <(N1,T4), (N5,T5), (N1, T1)>
+
+
+-- retorna a lista sem o contato n com o respectivo telefone t
+remNT(contatos, nt) = 
+		if (contatos == <>) then
+			<>
+		else if( head(contatos) == nt ) then
+			tail(contatos)
+		else
+			<head(contatos)>^remNT(tail(contatos), nt)
+
+
+-------------------------------------------------------------------------------
+-- Canais e processos
+-------------------------------------------------------------------------------
+
+channel inserir : NOMES.TELEFONES
+channel consultar : NOMES.Set(TELEFONES)
+channel remover : NOMES
+channel modificar : NOMES.TELEFONES.TELEFONES
+AGENDA = Pagenda(<>, AGENDA_EXTRA)
+
+-- insere apenas telefones que nao estao associados a um contato
+-- consulta apenas os telefones dos contatos cadastrados
+-- remove contatos cadastrados
+-- modifica contatos cadastrados de forma que o novo numero seja diferente do atual
+Pagenda(contatos, agenda_extra) = 
+	#contatos < MAX & 
+	 inserir?n?t: nao_associados(contatos, n) -> Pagenda(adi(contatos,n,t), agenda_extra)
+	[]
+	#agenda_extra > 0 &
+	 migrar?n:nomes(agenda_extra)?t:tels(agenda_extra, n) ->
+		if not member(t, tels(contatos,n)) then
+			inserir.n.t -> Pagenda(adi(contatos,n,t), remNT(agenda_extra, (n,t)))
+		else
+			cancelar.n.t -> Pagenda(contatos, remNT(agenda_extra, (n,t)))
+	[]
+	consultar?n:nomes(contatos)!tels(contatos,n) -> Pagenda(contatos, agenda_extra)
+	[]
+	remover?n:nomes(contatos) -> Pagenda(rem(contatos,n), agenda_extra)
+	[]
+	modificar?n:nomes(contatos)
+			?t_atual:tels(contatos,n)
+			?t_novo:novos(contatos, n, t_atual) -> 
+			Pagenda(mod(contatos,n,t_atual,t_novo), agenda_extra)
+
+	
+-- Criar um datatype com os novos nomes e outro com os novos telefones
+-- Criar um evento dizendo que foi migrado o contato X
+
+-- Assert 1: Adição de contatos com numeros que ainda não foram cadastrados
+assert Pagenda(EXEMPLO_AGENDA, AGENDA_EXTRA) [T= Pagenda(<(N1,T1), (N2,T2), (N3, T3), (N4,T4), (N5,T5), (N6, T6)>, <>)
+
+-- Assert 2: Adição de contatos com numeros que ainda não foram cadastrados E algum que já existe
+-- assert Pagenda(EXEMPLO_AGENDA, AGENDA_EXTRA_EXISTENTE) [F= migrar.N1.T1 -> Pagenda(<(N1,T1), (N2,T2), (N3, T3)>, <(N1,T4), (N5,T5)>)
+
+-- assert RUN(diff(Events, {inserir.N1.T1})) [T= Pagenda(EXEMPLO_AGENDA, AGENDA_EXTRA_EXISTENTE)
+assert Pagenda(EXEMPLO_AGENDA, AGENDA_EXTRA_EXISTENTE) [T= migrar.N1.T1 -> cancelar.N1.T1 -> Pagenda(<(N1,T1), (N2,T2), (N3, T3)>, <(N1,T4), (N5,T5)>)
