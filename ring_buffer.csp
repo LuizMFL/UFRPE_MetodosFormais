@@ -7,30 +7,30 @@
 -- Existe um processo controlador que gerencia a inserção e a remoção dos elementos nas células do Ring Buffer.
 -- Os processos das células rodam em paralelo mas sem comunicação entre eles
 -- Há sincronização entre o processo do controlador e o processo das células.
--- Verifique que ela é livre de deadlock e não determinismo.
+-- Verifique que ela é livre de deadlock e não determinismo.q Int)
 
-channel out, in, print: { 0..10 }.{ 0..100}
+channel out
+channel in: { 0..5 }.{ 0..100}
+channel allowed: { 0..5 }
 
-QUEUE = <(-1),(-1),(-1),(-1),(-1),(-1),(-1),(-1),(-1),(-1)>
+P(id, data) = 
+    out?id!data -> P(id, -1)
+    []
+    in?id?n -> P(id, n)
 
-P(id) = 
-    out?id?x -> SKIP
-
-add(value, queue, tail_index) = 
+add_in_queue(id, queue, tail_index) = 
     if ( queue == <> ) then
         <>
     else if ( tail_index == 0 ) then
-        <value>^tail(queue)
+        <id>^tail(queue)
     else
-        <head(queue)>^add(value, tail(queue), tail_index - 1)
+        <head(queue)>^add(id, tail(queue), tail_index - 1)
 
-REMOVE(queue, head_value, index) = 
-    
-RUN_OUT(queue, id) =
-    
-    out.id & done?id -> SKIP
-
-RING_BUFFER(queue, head, tail) =
-    head != tail -> {
-        
+RING_BUFFER(queue, head_value, tail_value) =
+    head_value != tail_value -> {
+        in?id?value -> @new_queue: add_in_queue(id, queue, tail_value) -> P(id, value) [|{|, escrever|}|] RING_BUFFER(new_queue, head_value, (tail_value + 1) % #new_queue) 
+        []
+        out -> RUN_OUT(head(queue)); RING_BUFFER(queue, (head_value + 1) % #queue, tail_value)
     }
+
+
